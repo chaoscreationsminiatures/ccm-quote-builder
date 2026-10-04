@@ -58,6 +58,14 @@
   h1 span{color:var(--orange);}
   .lede{color:var(--muted); max-width:60ch; margin-left:auto; margin-right:auto;}
   .reassurance{margin-top:.9rem; font-size:.85rem; color:var(--muted); letter-spacing:.05em;}
+  .info-callout{
+    display:flex; gap:.8rem; align-items:flex-start;
+    border:2px solid var(--orange); background:#1f1206;
+    padding:.9rem 1.1rem; margin-bottom:1.25rem;
+  }
+  .info-callout .info-icon{font-size:1.3rem; line-height:1.3;}
+  .info-callout strong{display:block; text-transform:uppercase; letter-spacing:.12em; font-size:.8rem; color:var(--orange); margin-bottom:.2rem;}
+  .info-callout p{font-size:.9rem; color:var(--text); margin:0;}
   .card{
     background:var(--panel); border:2px solid var(--border);
     padding:1.25rem; margin-bottom:1.25rem;
@@ -197,6 +205,14 @@
     <p class="lede">Build your miniature painting quote in under 60 seconds. Choose your army, select your models, pick your painting tier, and get an instant estimate.</p>
     <p class="reassurance">No commitment &nbsp;•&nbsp; Instant estimate &nbsp;•&nbsp; Final price confirmed before work begins</p>
   </header>
+
+  <div class="info-callout" role="note">
+    <span class="info-icon">ℹ️</span>
+    <div>
+      <strong>Please note</strong>
+      <p>This calculator estimates painting only. Assembly, magnetizing, and 3D-print cleanup are quoted separately.</p>
+    </div>
+  </div>
 
   <div class="builder-grid">
   <section class="card" aria-label="Build your quote">
