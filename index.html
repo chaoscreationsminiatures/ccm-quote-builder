@@ -155,6 +155,14 @@
   }
   textarea:focus{outline:none; border-color:var(--orange);}
   .opt{color:var(--muted); text-transform:none; letter-spacing:0; font-size:.75rem;}
+  .provide-row{display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.4rem;}
+  .provide-opt{
+    flex:1; min-width:200px; display:flex; align-items:center; gap:.5rem;
+    border:2px solid var(--border); background:#000; padding:.7rem .8rem;
+    font-size:.9rem; cursor:pointer;
+  }
+  .provide-opt:has(input:checked){border-color:var(--orange); background:#1f1206;}
+  .provide-opt input{accent-color:var(--orange); width:1rem; height:1rem;}
   #quote-list{list-style:none;}
   #quote-list li{
     background:var(--panel2); border:1px solid var(--border);
@@ -294,6 +302,12 @@
       <p class="form-intro">He'll confirm it by email — usually within 24 hours.</p>
       <label for="quote-notes">Notes <span class="opt">(optional)</span></label>
       <textarea id="quote-notes" rows="3" placeholder="Color schemes, sigils, specific requests for your models…"></textarea>
+      <label>Who provides the models?</label>
+      <div class="provide-row" role="radiogroup" aria-label="Who provides the models">
+        <label class="provide-opt"><input type="radio" name="provide" value="customer" checked> I'll provide my models</label>
+        <label class="provide-opt"><input type="radio" name="provide" value="david"> Please source them for me</label>
+      </div>
+      <div class="hint" id="provide-hint">If I source them, the model cost gets added to your quote when I confirm it.</div>
       <label for="sender-name">Your name</label>
       <input type="text" id="sender-name" autocomplete="name" required>
       <label for="sender-email">Your email</label>
@@ -644,9 +658,14 @@
     });
     var totalLine = 'Estimated total: ' + dispEmail(total) + (hasManual ? ' + manual quote items' : '');
     if (state.currency.code !== 'CAD') totalLine += ' (≈ ' + fmt(total) + ' CAD)';
+    var provideEl = document.querySelector('input[name="provide"]:checked');
+    var provideLine = (provideEl && provideEl.value === 'david')
+      ? 'Models: customer asked David to source the models — model cost to be added on confirmation.'
+      : 'Models: customer will provide their own models.';
     return 'I built the following quote on your website:\r\n\r\n' +
       lines.join('\r\n') +
       '\r\n\r\n' + totalLine +
+      '\r\n' + provideLine +
       (notes ? '\r\n\r\nCustomer notes:\r\n' + notes : '');
   }
 
