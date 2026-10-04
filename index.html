@@ -93,17 +93,22 @@
     background-repeat:no-repeat; background-position:right .8rem center; padding-right:2.2rem;
   }
   .hint{font-size:.8rem; color:var(--muted); margin-top:.35rem;}
-  .tiers{display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; margin-top:.4rem;}
+  .tiers{display:grid; grid-template-columns:repeat(3,1fr); gap:.6rem; margin-top:.4rem;}
   .tier-btn{
     background:#000; border:2px solid var(--border); color:var(--text);
-    padding:.7rem .4rem; cursor:pointer; text-align:center; border-radius:0;
-    font-family:inherit;
+    padding:1rem .5rem; cursor:pointer; text-align:center; border-radius:0;
+    font-family:inherit; display:flex; flex-direction:column; align-items:center; gap:.15rem;
   }
-  .tier-btn .t-name{display:block; font-weight:800; font-size:.85rem; text-transform:uppercase;}
-  .tier-btn .t-price{display:block; color:var(--orange); font-weight:800; font-size:1.05rem; margin-top:.2rem;}
+  .tier-btn .t-tier{font-family:"Anton",Impact,sans-serif; font-size:1.35rem; letter-spacing:.05em; line-height:1;}
+  .tier-btn .t-label{font-weight:700; font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-top:.25rem;}
+  .tier-btn .t-tag{font-size:.8rem; color:var(--muted); font-style:italic;}
+  .tier-btn .t-price{color:var(--orange); font-weight:800; font-size:1.3rem; margin-top:.5rem; line-height:1;}
+  .tier-btn .t-per{font-size:.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:.12em;}
   .tier-btn.active{border-color:var(--orange); background:#1f1206;}
-  .tier-defs{font-size:.78rem; color:var(--muted); margin-top:.6rem;}
-  .tier-defs strong{color:var(--text);}
+  .tier-btn.active .t-tier{color:var(--orange);}
+  .tier-defs{margin-top:.8rem; border-left:3px solid var(--orange); background:var(--panel); padding:.7rem .9rem;}
+  .tier-defs .td-name{font-weight:800; color:var(--orange); text-transform:uppercase; letter-spacing:.06em; font-size:.85rem; margin-bottom:.25rem;}
+  .tier-defs .td-desc{font-size:.85rem; color:var(--muted);}
   .row{display:flex; gap:.75rem; align-items:flex-end;}
   .row .grow{flex:1;}
   .btn{
@@ -304,18 +309,28 @@
     return lbl;
   }
 
+  var TIER_CARDS = {
+    '1': {label:'Tabletop Standard', tag:'Battle-ready'},
+    '2': {label:'Tabletop Plus', tag:'Extra polish'},
+    '3': {label:'Display / Showcase', tag:'Competition quality'}
+  };
+
   function renderTiers(){
     tiersEl.innerHTML = '';
     ['1','2','3'].forEach(function(t){
-      var info = DATA.meta.tiers[t];
+      var card = TIER_CARDS[t];
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'tier-btn' + (state.tier === t ? ' active' : '');
       b.setAttribute('role','radio');
       b.setAttribute('aria-checked', state.tier === t ? 'true' : 'false');
-      var price = state.unit && !state.unit.manual_quote ? fmt(tierPrice(state.unit, t)) : '—';
-      b.innerHTML = '<span class="t-name">Tier ' + t + '</span>' +
-                    '<span class="t-price">' + price + '</span>';
+      var hasPrice = state.unit && !state.unit.manual_quote;
+      var price = hasPrice ? fmt(tierPrice(state.unit, t)) : '—';
+      b.innerHTML = '<span class="t-tier">Tier ' + t + '</span>' +
+                    '<span class="t-label">' + card.label + '</span>' +
+                    '<span class="t-tag">' + card.tag + '</span>' +
+                    '<span class="t-price">' + (hasPrice ? '$' + price : '—') + '</span>' +
+                    (hasPrice ? '<span class="t-per">/ mini</span>' : '');
       b.addEventListener('click', function(){
         state.tier = t;
         renderTiers(); renderTierDefs(); renderPreview(); renderEstimate();
@@ -325,12 +340,10 @@
   }
 
   function renderTierDefs(){
-    var html = '';
-    ['1','2','3'].forEach(function(t){
-      var info = DATA.meta.tiers[t];
-      html += '<div><strong>' + info.name + ':</strong> ' + info.desc + '</div>';
-    });
-    $('tier-defs').innerHTML = html;
+    var info = DATA.meta.tiers[state.tier];
+    $('tier-defs').innerHTML =
+      '<div class="td-name">' + info.name + '</div>' +
+      '<div class="td-desc">' + info.desc + '</div>';
   }
 
   function renderPreview(){
