@@ -12419,13 +12419,63 @@
       return p;
     }
     var body = '';
-    body += para('Chaos Creations Miniatures — Quote Estimate', null, true);
-    body += para('Generated ' + new Date().toLocaleDateString() + ' · Estimates are in ' +
-      state.currency.code + '. Final price confirmed before work begins.', '666666');
-    quoteText().split(/\r?\n/).forEach(function(ln){
-      body += ln.trim() ? para(ln) : '<w:p/>';
+    body += para('Thank you for your quote request!', null, true);
+    body += para('Chaos Creations Miniatures — Quote Estimate · Generated ' +
+      new Date().toLocaleDateString() + ' · Estimates in ' + state.currency.code +
+      '. Final price confirmed before work begins.', '666666');
+    body += '<w:p/>';
+    // Invoice-style table: DESCRIPTION | UNIT PRICE | QTY | AMOUNT
+    function tcell(text, opts){
+      opts = opts || {};
+      var tcPr = '<w:tcPr>';
+      if (opts.shd) tcPr += '<w:shd w:val="clear" w:fill="' + opts.shd + '"/>';
+      if (opts.span) tcPr += '<w:gridSpan w:val="' + opts.span + '"/>';
+      tcPr += '</w:tcPr>';
+      var rPr = '<w:rPr>';
+      if (opts.b) rPr += '<w:b/>';
+      if (opts.color) rPr += '<w:color w:val="' + opts.color + '"/>';
+      rPr += '</w:rPr>';
+      return '<w:tc>' + tcPr + '<w:p><w:r>' + rPr +
+        '<w:t xml:space="preserve">' + docxEsc(text) + '</w:t></w:r></w:p></w:tc>';
+    }
+    var HDR = {shd:'1A1A1A', b:true, color:'FF8C1A'};
+    var tbl = '<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/>' +
+      '<w:tblW w:w="0" w:type="auto"/></w:tblPr>' +
+      '<w:tblGrid><w:gridCol/><w:gridCol/><w:gridCol/><w:gridCol/></w:tblGrid>';
+    tbl += '<w:tr>' + tcell('DESCRIPTION', HDR) + tcell('UNIT PRICE', HDR) +
+      tcell('QTY', HDR) + tcell('AMOUNT', HDR) + '</w:tr>';
+    var docTotal = 0, docManual = false;
+    state.lines.forEach(function(line){
+      var u = line.unit;
+      if (u.manual_quote){
+        docManual = true;
+        tbl += '<w:tr>' + tcell(u.name + ' (' + line.faction + ') — manual quote needed') +
+          tcell('—') + tcell(String(line.qty)) + tcell('—') + '</w:tr>';
+      } else {
+        var p = tierPrice(u, line.tier);
+        docTotal += p * line.qty;
+        tbl += '<w:tr>' + tcell(u.name + ' (' + line.faction + ') — Tier ' + line.tier) +
+          tcell(disp(p)) + tcell(String(line.qty)) + tcell(disp(p * line.qty)) + '</w:tr>';
+      }
+      if (line.assembly){
+        var au = asmUnits(line), af = asmFee(line);
+        docTotal += af;
+        tbl += '<w:tr>' + tcell('Assembly — ' + u.name + ' (' + au + (au === 1 ? ' unit' : ' units') + ')') +
+          tcell(disp(ASM_FEE)) + tcell(String(au)) + tcell(disp(af)) + '</w:tr>';
+      }
     });
-    body += para('Assembly available at $15 per unit — magnetizing and 3D-print cleanup quoted separately. chaoscreationminis.com', '666666');
+    tbl += '<w:tr>' + tcell('Estimated total' + (docManual ? ' + manual quote items' : ''), {b:true, span:3}) +
+      tcell(disp(docTotal), {b:true}) + '</w:tr>';
+    tbl += '</w:tbl>';
+    body += tbl;
+    body += '<w:p/>';
+    var provideEl = document.querySelector('input[name="provide"]:checked');
+    body += para((provideEl && provideEl.value === 'david')
+      ? 'Models: you asked David to source the models — model cost will be added when your quote is confirmed.'
+      : 'Models: you will provide your own models.', '666666');
+    var notes = $('quote-notes').value.trim();
+    if (notes) body += para('Your notes: ' + notes, '666666');
+    body += para('chaoscreationminis.com', '666666');
     var documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' +
       body + '<w:sectPr/></w:body></w:document>';
