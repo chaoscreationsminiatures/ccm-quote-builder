@@ -51,12 +51,13 @@
   .wrap{max-width:760px; margin:0 auto; padding:0 1rem;}
   header.hero{
     border-bottom:4px solid var(--orange);
-    padding:2rem 0 1.5rem; margin-bottom:1.5rem;
+    padding:2rem 0 1.5rem; margin-bottom:1.5rem; text-align:center;
   }
   .brand{font-size:.8rem; letter-spacing:.25em; color:var(--orange); font-weight:700; text-transform:uppercase;}
   h1{font-family:"Anton",Impact,sans-serif; font-size:2.4rem; font-weight:400; text-transform:uppercase; letter-spacing:.03em; margin:.4rem 0 .6rem; line-height:1.05;}
   h1 span{color:var(--orange);}
-  .lede{color:var(--muted); max-width:60ch;}
+  .lede{color:var(--muted); max-width:60ch; margin-left:auto; margin-right:auto;}
+  .reassurance{margin-top:.9rem; font-size:.85rem; color:var(--muted); letter-spacing:.05em;}
   .card{
     background:var(--panel); border:2px solid var(--border);
     padding:1.25rem; margin-bottom:1.25rem;
@@ -66,6 +67,19 @@
     color:var(--orange); margin-bottom:1rem;
     border-bottom:1px solid var(--border); padding-bottom:.6rem;
   }
+  .builder-grid{display:grid; grid-template-columns:1fr; gap:1.25rem; margin-bottom:1.25rem;}
+  .builder-grid > .card{margin-bottom:0;}
+  @media (min-width:920px){
+    .builder-grid{grid-template-columns:1fr 320px; align-items:start;}
+    .estimate-panel{position:sticky; top:150px;}
+  }
+  .est-unit-name{font-weight:700; font-size:1.05rem;}
+  .est-big{font-family:"Anton",Impact,sans-serif; font-size:2.8rem; color:var(--orange); line-height:1.1; margin:.3rem 0;}
+  .est-meta{color:var(--muted); font-size:.9rem;}
+  .est-div{border:none; border-top:1px solid var(--border); margin:1rem 0;}
+  .est-sub{display:flex; justify-content:space-between; align-items:baseline; font-size:.9rem; color:var(--muted);}
+  .est-sub strong{color:var(--text); font-size:1.3rem;}
+  .est-count{color:var(--muted); font-size:.8rem; margin-top:.2rem;}
   label{display:block; font-size:.75rem; text-transform:uppercase; letter-spacing:.15em; color:var(--muted); margin:1rem 0 .4rem;}
   label:first-of-type{margin-top:0;}
   select, input[type=number], input[type=text]{
@@ -174,10 +188,12 @@
 
   <header class="hero">
     <div class="brand">Chaos Creations Miniatures</div>
-    <h1>Self-Serve <span>Quote Builder</span></h1>
-    <p class="lede">Pick your army, pick your units, pick your paint tier — get an instant estimate for your commission. Painting only; assembly, magnetizing and 3D-print cleanup are quoted separately.</p>
+    <h1>Quote Builder</h1>
+    <p class="lede">Build your miniature painting quote in under 60 seconds. Choose your army, select your models, pick your painting tier, and get an instant estimate.</p>
+    <p class="reassurance">No commitment &nbsp;•&nbsp; Instant estimate &nbsp;•&nbsp; Final price confirmed before work begins</p>
   </header>
 
+  <div class="builder-grid">
   <section class="card" aria-label="Build your quote">
     <h2>Build your quote</h2>
 
@@ -210,7 +226,16 @@
     </div>
   </section>
 
-  <section class="card" aria-label="Your quote">
+  <aside class="card estimate-panel" aria-label="Your estimate">
+    <h2>Your estimate</h2>
+    <div id="estimate-body"></div>
+    <div class="btn-row">
+      <button class="btn ghost" id="view-quote-btn" type="button">View quote</button>
+    </div>
+  </aside>
+  </div>
+
+  <section class="card" aria-label="Your quote" id="your-quote">
     <h2>Your quote</h2>
     <ul id="quote-list"></ul>
     <div class="total-bar" id="total-bar" hidden>
@@ -293,7 +318,7 @@
                     '<span class="t-price">' + price + '</span>';
       b.addEventListener('click', function(){
         state.tier = t;
-        renderTiers(); renderTierDefs(); renderPreview();
+        renderTiers(); renderTierDefs(); renderPreview(); renderEstimate();
       });
       tiersEl.appendChild(b);
     });
@@ -333,6 +358,43 @@
     }
   }
 
+  function esc(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderEstimate(){
+    var body = $('estimate-body');
+    if (!body) return;
+    var html = '';
+    if (state.unit){
+      var qty = parseInt(qtyInput.value, 10);
+      if (!qty || qty < 1) qty = 1;
+      var tierName = DATA.meta.tiers[state.tier].name;
+      html += '<div class="est-unit-name">' + esc(state.unit.name) + '</div>';
+      if (state.unit.manual_quote){
+        html += '<div class="est-meta">Manual quote required — add it to your quote and send it in.</div>';
+      } else {
+        var p = tierPrice(state.unit, state.tier);
+        html += '<div class="est-big">' + fmt(p * qty) + '</div>';
+        html += '<div class="est-meta">' + esc(tierName) + '<br>' +
+          qty + (qty === 1 ? ' model' : ' models') + ' × ' + fmt(p) + '</div>';
+      }
+    } else {
+      html += '<div class="est-meta">Select an army and unit to see your estimate.</div>';
+    }
+    var count = state.lines.length, sub = 0, hasManual = false;
+    state.lines.forEach(function(line){
+      if (line.unit.manual_quote){ hasManual = true; }
+      else { sub += tierPrice(line.unit, line.tier) * line.qty; }
+    });
+    html += '<hr class="est-div">';
+    html += '<div class="est-sub"><span>Quote subtotal</span><strong>' +
+      fmt(sub) + (hasManual ? '+' : '') + '</strong></div>';
+    html += '<div class="est-count">' + count + (count === 1 ? ' item' : ' items') + ' in your quote</div>';
+    body.innerHTML = html;
+  }
+
   function addLine(){
     if (!state.unit) return;
     var qty = parseInt(qtyInput.value, 10);
@@ -348,7 +410,7 @@
     state.unit = null;
     unitSel.value = '';
     qtyInput.value = 1;
-    renderTiers(); renderPreview(); renderQuote();
+    renderTiers(); renderPreview(); renderQuote(); renderEstimate();
   }
 
   function renderQuote(){
@@ -440,6 +502,7 @@
     totalBar.hidden = false;
     quoteForm.hidden = false;
     clearBtn.hidden = false;
+    renderEstimate();
   }
 
   function quoteText(){
@@ -12092,16 +12155,16 @@
             unitSel.appendChild(o);
           });
         }
-        renderTiers(); renderPreview();
+        renderTiers(); renderPreview(); renderEstimate();
       });
 
       unitSel.addEventListener('change', function(){
         var j = unitSel.value;
         state.unit = (j === '' || !state.faction) ? null : state.faction.units[+j];
-        renderTiers(); renderPreview();
+        renderTiers(); renderPreview(); renderEstimate();
       });
 
-      renderTiers(); renderTierDefs(); renderPreview(); renderQuote();
+      renderTiers(); renderTierDefs(); renderPreview(); renderQuote(); renderEstimate();
     })
     .catch(function(){
       factionSel.innerHTML = '<option value="">Could not load unit data</option>';
@@ -12111,16 +12174,23 @@
   $('qty-minus').addEventListener('click', function(){
     var v = parseInt(qtyInput.value, 10);
     qtyInput.value = Math.max(1, (!v || v < 1) ? 1 : v - 1);
+    renderEstimate();
   });
   $('qty-plus').addEventListener('click', function(){
     var v = parseInt(qtyInput.value, 10);
     qtyInput.value = (!v || v < 1) ? 1 : v + 1;
+    renderEstimate();
   });
+  qtyInput.addEventListener('change', renderEstimate);
   clearBtn.addEventListener('click', function(){
     state.lines = [];
     renderQuote();
   });
   $('quote-form').addEventListener('submit', submitQuote);
+  $('view-quote-btn').addEventListener('click', function(){
+    var q = $('your-quote');
+    if (q) q.scrollIntoView({behavior:'smooth', block:'start'});
+  });
 })();
 </script>
 </body>
