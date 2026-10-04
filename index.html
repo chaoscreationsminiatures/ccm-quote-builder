@@ -159,9 +159,9 @@
   .provide-opt{
     flex:1; min-width:200px; display:flex; align-items:center; gap:.5rem;
     border:2px solid var(--border); background:#000; padding:.7rem .8rem;
-    font-size:.9rem; cursor:pointer;
+    font-size:.9rem; cursor:pointer; transition:transform .18s ease, border-color .18s ease, background .18s ease;
   }
-  .provide-opt:has(input:checked){border-color:var(--orange); background:#1f1206;}
+  .provide-opt:has(input:checked){border-color:var(--orange); background:#1f1206; transform:scale(1.05); z-index:1;}
   .provide-opt input{accent-color:var(--orange); width:1rem; height:1rem;}
   #quote-list{list-style:none;}
   #quote-list li{
