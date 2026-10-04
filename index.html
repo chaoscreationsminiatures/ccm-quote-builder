@@ -145,6 +145,9 @@
   .save-row{margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);}
   .save-row .btn-row{margin-top:.5rem;}
   .save-label{font-size:.85rem; color:var(--muted); display:block;}
+  .asm-toggle{display:flex; align-items:center; gap:.4rem; justify-content:flex-end;
+    font-size:.8rem; color:var(--muted); margin-top:.45rem; cursor:pointer;}
+  .asm-toggle input{accent-color:var(--orange); width:.95rem; height:.95rem;}
   #quote-form{margin-top:1.2rem; border-top:1px solid var(--border); padding-top:1rem;}
   #quote-form h3{margin:0 0 .2rem; font-size:1.05rem; color:var(--orange); text-transform:uppercase; letter-spacing:.1em;}
   .form-intro{color:var(--muted); font-size:.9rem; margin:0 0 .4rem;}
@@ -289,7 +292,7 @@
       <span class="info-icon">ℹ️</span>
       <div>
         <strong>Please note</strong>
-        <p>Painting only — assembly, magnetizing, and 3D-print cleanup are quoted separately.</p>
+        <p>Estimates cover painting. Assembly is available per line below at $15 per unit — magnetizing and 3D-print cleanup are quoted separately.</p>
       </div>
     </div>
     <ul id="quote-list"></ul>
@@ -433,6 +436,15 @@
     return tier === '1' ? u.price_t1 : tier === '2' ? u.price_t2 : u.price_t3;
   }
 
+  // Assembly: flat $15 CAD per store unit (box). Units = ceil(qty / models_per_unit).
+  var ASM_FEE = 15;
+  function asmUnits(line){
+    var mpu = (line.unit && line.unit.models_per_unit) || 1;
+    if (mpu < 1) mpu = 1;
+    return Math.max(1, Math.ceil(line.qty / mpu));
+  }
+  function asmFee(line){ return ASM_FEE * asmUnits(line); }
+
   function unitLabel(u){
     var lbl = u.name;
     var extra = [];
@@ -549,7 +561,8 @@
       faction: state.faction.faction,
       unit: state.unit,
       tier: state.tier,
-      qty: qty
+      qty: qty,
+      assembly: false
     });
     // Reset unit + quantity for the next entry; keep faction (and tier) as-is
     // so a leftover quantity can't accidentally multiply the next unit.
@@ -584,13 +597,21 @@
 
       var right = document.createElement('div');
       right.style.textAlign = 'right';
+      var au = asmUnits(line), afee = asmFee(line);
+      if (line.assembly) total += afee;
       if (!u.manual_quote){
         var p = tierPrice(u, line.tier);
         total += p * line.qty;
         var pr = document.createElement('div');
         pr.className = 'q-price';
-        pr.textContent = disp(p) + ' × ' + line.qty + ' = ' + disp(p * line.qty);
+        pr.textContent = disp(p) + ' × ' + line.qty + ' = ' + disp(p * line.qty) +
+          (line.assembly ? ' + ' + disp(afee) + ' assembly' : '');
         right.appendChild(pr);
+      } else if (line.assembly){
+        var prm = document.createElement('div');
+        prm.className = 'q-price';
+        prm.textContent = '+ ' + disp(afee) + ' assembly';
+        right.appendChild(prm);
       }
       var ctrl = document.createElement('div');
       ctrl.className = 'q-controls';
@@ -632,6 +653,21 @@
       });
       ctrl.appendChild(minus); ctrl.appendChild(qin); ctrl.appendChild(plus); ctrl.appendChild(rm);
       right.appendChild(ctrl);
+      var asmLab = document.createElement('label');
+      asmLab.className = 'asm-toggle';
+      var asmChk = document.createElement('input');
+      asmChk.type = 'checkbox';
+      asmChk.checked = !!line.assembly;
+      asmChk.setAttribute('aria-label', 'Add assembly for ' + u.name);
+      asmChk.addEventListener('change', function(){
+        line.assembly = asmChk.checked;
+        renderQuote();
+      });
+      asmLab.appendChild(asmChk);
+      var asmTxt = document.createElement('span');
+      asmTxt.textContent = '+ Assembly (' + au + ' × ' + disp(ASM_FEE) + ')';
+      asmLab.appendChild(asmTxt);
+      right.appendChild(asmLab);
 
       li.appendChild(left); li.appendChild(right);
       if (u.manual_quote){
@@ -660,11 +696,24 @@
       var u = line.unit;
       if (u.manual_quote){
         hasManual = true;
-        lines.push('- ' + u.name + ' (' + line.faction + ') x' + line.qty + ' — MANUAL QUOTE NEEDED');
+        var msuffix = '';
+        if (line.assembly){
+          var mafee = asmFee(line), mau = asmUnits(line);
+          total += mafee;
+          msuffix = ' + ' + dispEmail(mafee) + ' assembly (' + mau + (mau === 1 ? ' unit' : ' units') + ')';
+        }
+        lines.push('- ' + u.name + ' (' + line.faction + ') x' + line.qty + ' — MANUAL QUOTE NEEDED' + msuffix);
       } else {
         var p = tierPrice(u, line.tier);
-        total += p * line.qty;
-        lines.push('- ' + u.name + ' (' + line.faction + ') — Tier ' + line.tier + ' x' + line.qty + ' = ' + dispEmail(p * line.qty));
+        var lineTotal = p * line.qty;
+        var suffix = '';
+        if (line.assembly){
+          var afee = asmFee(line), au = asmUnits(line);
+          lineTotal += afee;
+          suffix = ' + ' + dispEmail(afee) + ' assembly (' + au + (au === 1 ? ' unit' : ' units') + ')';
+        }
+        total += lineTotal;
+        lines.push('- ' + u.name + ' (' + line.faction + ') — Tier ' + line.tier + ' x' + line.qty + ' = ' + dispEmail(p * line.qty) + suffix);
       }
     });
     var totalLine = 'Estimated total: ' + dispEmail(total) + (hasManual ? ' + manual quote items' : '');
