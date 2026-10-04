@@ -303,10 +303,8 @@
     <div class="save-row" id="save-row" hidden>
       <span class="save-label">Not ready to send? Keep your quote:</span>
       <div class="btn-row">
-        <button class="btn ghost" id="copy-btn" type="button">Copy quote</button>
-        <button class="btn ghost" id="dl-btn" type="button">Download .doc</button>
+        <button class="btn ghost" id="dl-btn" type="button">Download quote (.doc)</button>
       </div>
-      <div class="hint" id="copy-hint" hidden>Copied — paste it anywhere to keep or compare.</div>
     </div>
     <form id="quote-form" hidden>
       <h3>Send this quote to David</h3>
@@ -355,7 +353,7 @@
       quoteList = $('quote-list'), totalBar = $('total-bar'),
       totalValue = $('total-value'), totalNote = $('total-note'),
       quoteForm = $('quote-form'), clearBtn = $('clear-btn'),
-      saveRow = $('save-row'), copyHint = $('copy-hint'),
+      saveRow = $('save-row'),
       formStatus = $('form-status'), sendBtn = $('send-btn');
 
   function fmt(n){ return String(n); } // bare numbers, no currency symbols (CAD canonical)
@@ -12342,23 +12340,6 @@
     state.lines = [];
     renderQuote();
   });
-  $('copy-btn').addEventListener('click', function(){
-    var text = quoteText();
-    function done(){
-      copyHint.hidden = false;
-      setTimeout(function(){ copyHint.hidden = true; }, 3000);
-    }
-    if (navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(done, function(){ fallbackCopy(text); done(); });
-    } else { fallbackCopy(text); done(); }
-  });
-  function fallbackCopy(text){
-    var ta = document.createElement('textarea');
-    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-    document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); } catch(e){}
-    document.body.removeChild(ta);
-  }
   $('dl-btn').addEventListener('click', function(){
     var text = quoteText();
     var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Chaos Creations Miniatures — Quote</title></head><body>' +
