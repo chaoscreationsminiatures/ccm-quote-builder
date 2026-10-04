@@ -142,6 +142,9 @@
   .btn.danger{background:transparent; color:var(--danger); border:2px solid var(--danger);}
   .btn.danger:hover{background:#220a0a;}
   .btn-row{display:flex; gap:.6rem; flex-wrap:wrap; margin-top:1rem;}
+  .save-row{margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);}
+  .save-row .btn-row{margin-top:.5rem;}
+  .save-label{font-size:.85rem; color:var(--muted); display:block;}
   #quote-form{margin-top:1.2rem; border-top:1px solid var(--border); padding-top:1rem;}
   #quote-form h3{margin:0 0 .2rem; font-size:1.05rem; color:var(--orange); text-transform:uppercase; letter-spacing:.1em;}
   .form-intro{color:var(--muted); font-size:.9rem; margin:0 0 .4rem;}
@@ -297,6 +300,14 @@
     <div class="btn-row">
       <button class="btn danger" id="clear-btn" hidden>Clear quote</button>
     </div>
+    <div class="save-row" id="save-row" hidden>
+      <span class="save-label">Not ready to send? Keep your quote:</span>
+      <div class="btn-row">
+        <button class="btn ghost" id="copy-btn" type="button">Copy quote</button>
+        <button class="btn ghost" id="dl-btn" type="button">Download .doc</button>
+      </div>
+      <div class="hint" id="copy-hint" hidden>Copied — paste it anywhere to keep or compare.</div>
+    </div>
     <form id="quote-form" hidden>
       <h3>Send this quote to David</h3>
       <p class="form-intro">He'll confirm it by email — usually within 24 hours.</p>
@@ -344,6 +355,7 @@
       quoteList = $('quote-list'), totalBar = $('total-bar'),
       totalValue = $('total-value'), totalNote = $('total-note'),
       quoteForm = $('quote-form'), clearBtn = $('clear-btn'),
+      saveRow = $('save-row'), copyHint = $('copy-hint'),
       formStatus = $('form-status'), sendBtn = $('send-btn');
 
   function fmt(n){ return String(n); } // bare numbers, no currency symbols (CAD canonical)
@@ -553,7 +565,7 @@
     quoteList.innerHTML = '';
     if (!state.lines.length){
       quoteList.innerHTML = '<li class="empty" style="display:block;border:none;background:none;">No units added yet — build your quote above.</li>';
-      totalBar.hidden = true; quoteForm.hidden = true; clearBtn.hidden = true;
+      totalBar.hidden = true; quoteForm.hidden = true; clearBtn.hidden = true; saveRow.hidden = true;
       return;
     }
     var total = 0, hasManual = false;
@@ -638,6 +650,7 @@
     totalBar.hidden = false;
     quoteForm.hidden = false;
     clearBtn.hidden = false;
+    saveRow.hidden = false;
     renderEstimate();
   }
 
@@ -12328,6 +12341,38 @@
   clearBtn.addEventListener('click', function(){
     state.lines = [];
     renderQuote();
+  });
+  $('copy-btn').addEventListener('click', function(){
+    var text = quoteText();
+    function done(){
+      copyHint.hidden = false;
+      setTimeout(function(){ copyHint.hidden = true; }, 3000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, function(){ fallbackCopy(text); done(); });
+    } else { fallbackCopy(text); done(); }
+  });
+  function fallbackCopy(text){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch(e){}
+    document.body.removeChild(ta);
+  }
+  $('dl-btn').addEventListener('click', function(){
+    var text = quoteText();
+    var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Chaos Creations Miniatures — Quote</title></head><body>' +
+      '<h1 style="font-family:Arial">Chaos Creations Miniatures — Quote Estimate</h1>' +
+      '<p style="font-family:Arial;color:#555">Generated ' + new Date().toLocaleDateString() + ' · Estimates are in ' + state.currency.code + '. Final price confirmed before work begins.</p>' +
+      '<pre style="font-family:Arial;font-size:14px">' + text.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</pre>' +
+      '<p style="font-family:Arial;color:#555">Painting only — assembly, magnetizing, and 3D-print cleanup are quoted separately.<br>chaoscreationminis.com</p>' +
+      '</body></html>';
+    var blob = new Blob(['\ufeff', html], {type: 'application/msword'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'CCM-Quote.doc';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
   });
   $('quote-form').addEventListener('submit', submitQuote);
   $('currency-sel').addEventListener('change', function(){
