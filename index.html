@@ -66,6 +66,13 @@
   .info-callout .info-icon{font-size:1.3rem; line-height:1.3;}
   .info-callout strong{display:block; text-transform:uppercase; letter-spacing:.12em; font-size:.8rem; color:var(--orange); margin-bottom:.2rem;}
   .info-callout p{font-size:.9rem; color:var(--text); margin:0;}
+  .currency-row{
+    display:flex; align-items:center; justify-content:flex-end; gap:.5rem;
+    margin-bottom:1rem; font-size:.82rem; color:var(--muted);
+  }
+  .currency-row label{text-transform:uppercase; letter-spacing:.1em; font-size:.72rem;}
+  .currency-row select{width:auto; padding:.35rem 1.8rem .35rem .6rem; font-size:.85rem;}
+  .currency-note{font-size:.75rem;}
   .card{
     background:var(--panel); border:2px solid var(--border);
     padding:1.25rem; margin-bottom:1.25rem;
@@ -214,6 +221,19 @@
     </div>
   </div>
 
+  <div class="currency-row">
+    <label for="currency-sel">Prices in</label>
+    <select id="currency-sel" aria-label="Display currency">
+      <option value="CAD">CAD</option>
+      <option value="USD">USD</option>
+      <option value="EUR">EUR</option>
+      <option value="GBP">GBP</option>
+      <option value="AUD">AUD</option>
+      <option value="NZD">NZD</option>
+    </select>
+    <span class="currency-note" id="currency-note"></span>
+  </div>
+
   <div class="builder-grid">
   <section class="card" aria-label="Build your quote">
     <h2>Build your quote</h2>
@@ -309,7 +329,78 @@
       quoteForm = $('quote-form'), clearBtn = $('clear-btn'),
       formStatus = $('form-status'), sendBtn = $('send-btn');
 
-  function fmt(n){ return String(n); } // bare numbers, no currency symbols
+  function fmt(n){ return String(n); } // bare numbers, no currency symbols (CAD canonical)
+
+  // ---- multi-currency display (rate card is CAD; convert for visitors) ----
+  var CURRENCIES = {
+    CAD:{symbol:'$'}, USD:{symbol:'$'}, EUR:{symbol:'€'},
+    GBP:{symbol:'£'}, AUD:{symbol:'$'}, NZD:{symbol:'$'}
+  };
+  state.currency = {code:'CAD', symbol:'$', rate:1};
+
+  // on-page display: bare numbers for CAD, symbol for converted currencies
+  function disp(n){
+    var c = state.currency;
+    var v = Math.round(n * c.rate);
+    return c.code === 'CAD' ? String(v) : c.symbol + v;
+  }
+  // email display: always labeled with the currency code
+  function dispEmail(n){
+    var c = state.currency;
+    var v = Math.round(n * c.rate);
+    return c.code === 'CAD' ? v + ' CAD' : c.symbol + v + ' ' + c.code;
+  }
+
+  function currencyFromLocale(){
+    var m = (navigator.language || 'en-CA').match(/-([A-Za-z]{2})$/);
+    var cc = m ? m[1].toUpperCase() : 'CA';
+    var map = {US:'USD', GB:'GBP', AU:'AUD', NZ:'NZD', CA:'CAD'};
+    if (map[cc]) return map[cc];
+    var eu = ['AT','BE','HR','CY','EE','FI','FR','DE','GR','IE','IT','LV','LT','LU','MT','NL','PT','SK','SI','ES'];
+    if (eu.indexOf(cc) >= 0) return 'EUR';
+    return 'CAD';
+  }
+
+  function applyCurrency(){
+    var c = state.currency;
+    var sel = $('currency-sel');
+    if (sel) sel.value = c.code;
+    var note = $('currency-note');
+    if (note){
+      note.textContent = c.code === 'CAD'
+        ? 'Canadian dollars'
+        : 'Converted from CAD · 1 CAD ≈ ' + c.rate.toFixed(3) + ' ' + c.code;
+    }
+    renderTiers(); renderTierDefs(); renderPreview(); renderEstimate(); renderQuote();
+  }
+
+  function setCurrency(code){
+    if (!CURRENCIES[code]) code = 'CAD';
+    state.currency.code = code;
+    state.currency.symbol = CURRENCIES[code].symbol;
+    if (code === 'CAD'){
+      state.currency.rate = 1;
+      applyCurrency();
+      return;
+    }
+    fetch('https://open.er-api.com/v6/latest/CAD')
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (d && d.result === 'success' && d.rates && d.rates[code]){
+          state.currency.rate = d.rates[code];
+          applyCurrency();
+        }
+      })
+      .catch(function(){ /* keep CAD on rate failure */ });
+  }
+
+  function detectCurrency(){
+    fetch('https://ipapi.co/json/')
+      .then(function(r){ return r.json(); })
+      .then(function(d){ return (d && d.currency && CURRENCIES[d.currency]) ? d.currency : null; })
+      .catch(function(){ return null; })
+      .then(function(code){ setCurrency(code || currencyFromLocale()); });
+  }
 
   function tierPrice(u, tier){
     return tier === '1' ? u.price_t1 : tier === '2' ? u.price_t2 : u.price_t3;
@@ -341,11 +432,10 @@
       b.setAttribute('role','radio');
       b.setAttribute('aria-checked', state.tier === t ? 'true' : 'false');
       var hasPrice = state.unit && !state.unit.manual_quote;
-      var price = hasPrice ? fmt(tierPrice(state.unit, t)) : '—';
       b.innerHTML = '<span class="t-tier">Tier ' + t + '</span>' +
                     '<span class="t-label">' + card.label + '</span>' +
                     '<span class="t-tag">' + card.tag + '</span>' +
-                    '<span class="t-price">' + (hasPrice ? '$' + price : '—') + '</span>' +
+                    '<span class="t-price">' + (hasPrice ? disp(tierPrice(state.unit, t)) : '—') + '</span>' +
                     (hasPrice ? '<span class="t-per">/ mini</span>' : '');
       b.addEventListener('click', function(){
         state.tier = t;
@@ -383,7 +473,7 @@
       pricePreview.innerHTML = '<strong>Manual quote required</strong> — this one needs a personal quote. Add it and email David.';
     } else {
       pricePreview.innerHTML = 'Per model at Tier ' + state.tier + ': <strong>' +
-        fmt(tierPrice(u, state.tier)) + '</strong>';
+        disp(tierPrice(u, state.tier)) + '</strong>';
     }
   }
 
@@ -405,9 +495,9 @@
         html += '<div class="est-meta">Manual quote required — add it to your quote and send it in.</div>';
       } else {
         var p = tierPrice(state.unit, state.tier);
-        html += '<div class="est-big">' + fmt(p * qty) + '</div>';
+        html += '<div class="est-big">' + disp(p * qty) + '</div>';
         html += '<div class="est-meta">' + esc(tierName) + '<br>' +
-          qty + (qty === 1 ? ' model' : ' models') + ' × ' + fmt(p) + '</div>';
+          qty + (qty === 1 ? ' model' : ' models') + ' × ' + disp(p) + '</div>';
       }
     } else {
       html += '<div class="est-meta">Select an army and unit to see your estimate.</div>';
@@ -419,7 +509,7 @@
     });
     html += '<hr class="est-div">';
     html += '<div class="est-sub"><span>Quote subtotal</span><strong>' +
-      fmt(sub) + (hasManual ? '+' : '') + '</strong></div>';
+      disp(sub) + (hasManual ? '+' : '') + '</strong></div>';
     html += '<div class="est-count">' + count + (count === 1 ? ' item' : ' items') + ' in your quote</div>';
     body.innerHTML = html;
   }
@@ -472,7 +562,7 @@
         total += p * line.qty;
         var pr = document.createElement('div');
         pr.className = 'q-price';
-        pr.textContent = fmt(p) + ' × ' + line.qty + ' = ' + fmt(p * line.qty);
+        pr.textContent = disp(p) + ' × ' + line.qty + ' = ' + disp(p * line.qty);
         right.appendChild(pr);
       }
       var ctrl = document.createElement('div');
@@ -526,7 +616,7 @@
       quoteList.appendChild(li);
     });
 
-    totalValue.textContent = fmt(total);
+    totalValue.textContent = disp(total);
     totalNote.hidden = !hasManual;
     totalBar.hidden = false;
     quoteForm.hidden = false;
@@ -546,12 +636,14 @@
       } else {
         var p = tierPrice(u, line.tier);
         total += p * line.qty;
-        lines.push('- ' + u.name + ' (' + line.faction + ') — Tier ' + line.tier + ' x' + line.qty + ' = ' + (p * line.qty));
+        lines.push('- ' + u.name + ' (' + line.faction + ') — Tier ' + line.tier + ' x' + line.qty + ' = ' + dispEmail(p * line.qty));
       }
     });
+    var totalLine = 'Estimated total: ' + dispEmail(total) + (hasManual ? ' + manual quote items' : '');
+    if (state.currency.code !== 'CAD') totalLine += ' (≈ ' + fmt(total) + ' CAD)';
     return 'I built the following quote on your website:\r\n\r\n' +
       lines.join('\r\n') +
-      '\r\n\r\nEstimated total: ' + total + (hasManual ? ' + manual quote items' : '') +
+      '\r\n\r\n' + totalLine +
       (notes ? '\r\n\r\nCustomer notes:\r\n' + notes : '');
   }
 
@@ -12216,6 +12308,10 @@
     renderQuote();
   });
   $('quote-form').addEventListener('submit', submitQuote);
+  $('currency-sel').addEventListener('change', function(){
+    setCurrency(this.value);
+  });
+  detectCurrency();
   $('view-quote-btn').addEventListener('click', function(){
     var q = $('your-quote');
     if (q) q.scrollIntoView({behavior:'smooth', block:'start'});
