@@ -306,7 +306,7 @@
     <div class="save-row" id="save-row" hidden>
       <span class="save-label">Not ready to send? Keep your quote:</span>
       <div class="btn-row">
-        <button class="btn ghost" id="dl-btn" type="button">Download quote (.doc)</button>
+        <button class="btn ghost" id="dl-btn" type="button">Download quote (.docx)</button>
       </div>
     </div>
     <form id="quote-form" hidden>
@@ -12389,18 +12389,92 @@
     state.lines = [];
     renderQuote();
   });
+  // Real .docx generator (hand-rolled stored zip + CRC32, no libraries) —
+  // genuine Office Open XML so the file opens everywhere incl. phones.
+  function docxCrc32(data){
+    var table = docxCrc32.t;
+    if (!table){
+      table = docxCrc32.t = new Uint32Array(256);
+      for (var n = 0; n < 256; n++){
+        var c = n;
+        for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        table[n] = c >>> 0;
+      }
+    }
+    var crc = 0xFFFFFFFF;
+    for (var i = 0; i < data.length; i++) crc = table[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+  function docxEsc(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function buildQuoteDocx(){
+    var enc = new TextEncoder();
+    function para(text, color, heading){
+      var p = '<w:p>';
+      if (heading) p += '<w:pPr><w:pStyle w:val="Heading1"/></w:pPr>';
+      p += '<w:r>';
+      if (color) p += '<w:rPr><w:color w:val="' + color + '"/></w:rPr>';
+      p += '<w:t xml:space="preserve">' + docxEsc(text) + '</w:t></w:r></w:p>';
+      return p;
+    }
+    var body = '';
+    body += para('Chaos Creations Miniatures — Quote Estimate', null, true);
+    body += para('Generated ' + new Date().toLocaleDateString() + ' · Estimates are in ' +
+      state.currency.code + '. Final price confirmed before work begins.', '666666');
+    quoteText().split(/\r?\n/).forEach(function(ln){
+      body += ln.trim() ? para(ln) : '<w:p/>';
+    });
+    body += para('Assembly available at $15 per unit — magnetizing and 3D-print cleanup quoted separately. chaoscreationminis.com', '666666');
+    var documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' +
+      body + '<w:sectPr/></w:body></w:document>';
+    var contentTypes = '<?xml version="1.0" encoding="UTF-8"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+      '</Types>';
+    var rels = '<?xml version="1.0" encoding="UTF-8"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+      '</Relationships>';
+    var files = [
+      {name:'[Content_Types].xml', data: enc.encode(contentTypes)},
+      {name:'_rels/.rels', data: enc.encode(rels)},
+      {name:'word/document.xml', data: enc.encode(documentXml)}
+    ];
+    function u16(v){ return [v & 255, (v >>> 8) & 255]; }
+    function u32(v){ return [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255]; }
+    var out = [], central = [], offset = 0;
+    function pushAll(arr){ out.push.apply(out, arr); }
+    files.forEach(function(f){
+      var nb = enc.encode(f.name), crc = docxCrc32(f.data);
+      var hdr0 = out.length;
+      pushAll([0x50,0x4B,3,4].concat(u16(20), u16(0), u16(0), u16(0), u16(0),
+        u32(crc), u32(f.data.length), u32(f.data.length), u16(nb.length), u16(0)));
+      for (var i = 0; i < nb.length; i++) out.push(nb[i]);
+      for (var j = 0; j < f.data.length; j++) out.push(f.data[j]);
+      central.push({nb: nb, crc: crc, size: f.data.length, offset: offset});
+      offset += out.length - hdr0;
+    });
+    var centralStart = offset, cs0 = out.length;
+    central.forEach(function(c){
+      pushAll([0x50,0x4B,1,2].concat(u16(20), u16(20), u16(0), u16(0), u16(0), u16(0),
+        u32(c.crc), u32(c.size), u32(c.size), u16(c.nb.length),
+        u16(0), u16(0), u16(0), u16(0), u32(0), u32(c.offset)));
+      for (var i = 0; i < c.nb.length; i++) out.push(c.nb[i]);
+    });
+    var centralSize = out.length - cs0;
+    pushAll([0x50,0x4B,5,6].concat(u16(0), u16(0), u16(central.length), u16(central.length),
+      u32(centralSize), u32(centralStart), u16(0)));
+    return new Blob([new Uint8Array(out)], {type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  }
   $('dl-btn').addEventListener('click', function(){
-    var text = quoteText();
-    var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Chaos Creations Miniatures — Quote</title></head><body>' +
-      '<h1 style="font-family:Arial">Chaos Creations Miniatures — Quote Estimate</h1>' +
-      '<p style="font-family:Arial;color:#555">Generated ' + new Date().toLocaleDateString() + ' · Estimates are in ' + state.currency.code + '. Final price confirmed before work begins.</p>' +
-      '<pre style="font-family:Arial;font-size:14px">' + text.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</pre>' +
-      '<p style="font-family:Arial;color:#555">Painting only — assembly, magnetizing, and 3D-print cleanup are quoted separately.<br>chaoscreationminis.com</p>' +
-      '</body></html>';
-    var blob = new Blob(['\ufeff', html], {type: 'application/msword'});
+    var blob = buildQuoteDocx();
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'CCM-Quote.doc';
+    a.download = 'CCM-Quote.docx';
     document.body.appendChild(a); a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
   });
