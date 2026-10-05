@@ -766,7 +766,7 @@
   // ---- init ----
   Promise.resolve({ok:true, json:function(){return {
  "meta": {
-  "generated": "2026-10-03",
+  "generated": "2026-10-04",
   "edition": "11th",
   "source": "INDEX.md rate card (31 rows) + units/ (949 units)",
   "tiers": {
@@ -4886,14 +4886,14 @@
     {
      "name": "Khorne Lord of Skulls",
      "base": "no base / hull",
-     "role": "Vehicle-standard",
+     "role": "Super-heavy",
      "models_per_unit": 1,
-     "price_t1": 110,
-     "price_t2": 165,
-     "price_t3": 220,
+     "price_t1": 520,
+     "price_t2": 780,
+     "price_t3": 1040,
      "manual_quote": false,
      "wings_premium_applied": false,
-     "pricing_note": "60mm Vehicle-standard row (hull)"
+     "pricing_note": "Super-heavy (Lord of Skulls) row"
     },
     {
      "name": "Kravek Morne",
@@ -12224,14 +12224,14 @@
     {
      "name": "Khorne Lord of Skulls",
      "base": "no base / hull",
-     "role": "Vehicle-standard",
+     "role": "Super-heavy",
      "models_per_unit": 1,
-     "price_t1": 110,
-     "price_t2": 165,
-     "price_t3": 220,
+     "price_t1": 520,
+     "price_t2": 780,
+     "price_t3": 1040,
      "manual_quote": false,
      "wings_premium_applied": false,
-     "pricing_note": "60mm Vehicle-standard row (hull)"
+     "pricing_note": "Super-heavy (Lord of Skulls) row"
     },
     {
      "name": "Khârn the Betrayer",
@@ -12320,7 +12320,8 @@
    ]
   }
  ]
-}}})
+}
+}})
     .then(function(r){ if(!r.ok) throw new Error('data load failed'); return r.json(); })
     .then(function(data){
       DATA = data;
