@@ -771,15 +771,15 @@
   "source": "INDEX.md rate card (31 rows) + units/ (949 units)",
   "tiers": {
    "1": {
-    "name": "Tier 1 — Tabletop Standard",
+    "name": "Tier 1 \u2014 Tabletop Standard",
     "desc": "Battle-ready for gamers: clean basecoats with shading, simple highlights, basic details, standard textured bases."
    },
    "2": {
-    "name": "Tier 2 — Tabletop Plus",
+    "name": "Tier 2 \u2014 Tabletop Plus",
     "desc": "Stand out with extra polish: layered highlights, crisp edges, detailed faces and icons, upgraded bases."
    },
    "3": {
-    "name": "Tier 3 — Display / Showcase",
+    "name": "Tier 3 \u2014 Display / Showcase",
     "desc": "Competition-ready for collectors: advanced blending, OSL/NMM, freehand, custom scenic bases."
    }
   },
@@ -895,7 +895,7 @@
      "price_t3": null,
      "manual_quote": true,
      "wings_premium_applied": false,
-     "pricing_note": "Base size unverified — contact for quote",
+     "pricing_note": "Base size unverified \u2014 contact for quote",
      "unverified_base": true
     },
     {
@@ -1979,7 +1979,7 @@
      "price_t3": null,
      "manual_quote": true,
      "wings_premium_applied": false,
-     "pricing_note": "Base size unverified — contact for quote",
+     "pricing_note": "Base size unverified \u2014 contact for quote",
      "unverified_base": true
     },
     {
@@ -2064,7 +2064,7 @@
      "price_t3": null,
      "manual_quote": true,
      "wings_premium_applied": false,
-     "pricing_note": "Base size unverified — contact for quote",
+     "pricing_note": "Base size unverified \u2014 contact for quote",
      "unverified_base": true
     },
     {
@@ -2185,7 +2185,7 @@
      "price_t3": null,
      "manual_quote": true,
      "wings_premium_applied": false,
-     "pricing_note": "Base size unverified — contact for quote",
+     "pricing_note": "Base size unverified \u2014 contact for quote",
      "unverified_base": true
     },
     {
@@ -2330,7 +2330,7 @@
      "price_t3": null,
      "manual_quote": true,
      "wings_premium_applied": false,
-     "pricing_note": "Base size unverified — contact for quote",
+     "pricing_note": "Base size unverified \u2014 contact for quote",
      "unverified_base": true
     },
     {
@@ -7550,7 +7550,7 @@
    "faction": "Leagues of Votann",
    "units": [
     {
-     "name": "Brôkhyr Thunderkyn",
+     "name": "Br\u00f4khyr Thunderkyn",
      "base": "40mm",
      "role": "Infantry",
      "models_per_unit": 3,
@@ -7658,7 +7658,7 @@
      "pricing_note": "32mm Character row"
     },
     {
-     "name": "Kâhl",
+     "name": "K\u00e2hl",
      "base": "40mm",
      "role": "Character",
      "models_per_unit": 1,
@@ -7682,7 +7682,7 @@
      "pricing_note": "60mm Vehicle-standard row (hull)"
     },
     {
-     "name": "Ûthar the Destined",
+     "name": "\u00dbthar the Destined",
      "base": "40mm",
      "role": "Character",
      "models_per_unit": 1,
@@ -7711,7 +7711,7 @@
      "pricing_note": "60mm Vehicle-standard row"
     },
     {
-     "name": "C’tan Shard of the Deceiver",
+     "name": "C\u2019tan Shard of the Deceiver",
      "base": "40mm",
      "role": "Large monster",
      "models_per_unit": 1,
@@ -7723,7 +7723,7 @@
      "pricing_note": "Large monster row"
     },
     {
-     "name": "C’tan Shard of the Nightbringer",
+     "name": "C\u2019tan Shard of the Nightbringer",
      "base": "90mm",
      "role": "Large monster",
      "models_per_unit": 1,
@@ -7735,7 +7735,7 @@
      "pricing_note": "Large monster row"
     },
     {
-     "name": "C’tan Shard of the Void Dragon",
+     "name": "C\u2019tan Shard of the Void Dragon",
      "base": "80mm",
      "role": "Large monster",
      "models_per_unit": 1,
@@ -8263,7 +8263,7 @@
      "pricing_note": "32mm Mounted row (jetbike)"
     },
     {
-     "name": "Transcendent C’tan",
+     "name": "Transcendent C\u2019tan",
      "base": "60mm",
      "role": "Large monster",
      "models_per_unit": 1,
@@ -10452,7 +10452,7 @@
    ]
   },
   {
-   "faction": "T’au Empire",
+   "faction": "T\u2019au Empire",
    "units": [
     {
      "name": "Breacher Team",
@@ -10875,7 +10875,7 @@
      "pricing_note": "60mm Vehicle-standard row"
     },
     {
-     "name": "Ta’unar Supremacy Armour",
+     "name": "Ta\u2019unar Supremacy Armour",
      "base": "160mm",
      "role": "Super-heavy",
      "models_per_unit": 1,
@@ -12234,7 +12234,7 @@
      "pricing_note": "Super-heavy (Lord of Skulls) row"
     },
     {
-     "name": "Khârn the Betrayer",
+     "name": "Kh\u00e2rn the Betrayer",
      "base": "40mm",
      "role": "Character",
      "models_per_unit": 1,
@@ -12426,9 +12426,11 @@
       '. Final price confirmed before work begins.', '666666');
     body += '<w:p/>';
     // Invoice-style table: DESCRIPTION | UNIT PRICE | QTY | AMOUNT
-    function tcell(text, opts){
+    // Fixed layout with explicit dxa widths — auto layout collapses columns in some viewers.
+    var COLW = [4800, 1600, 1000, 1960]; // total 9360 dxa = full text width
+    function tcell(text, opts, w){
       opts = opts || {};
-      var tcPr = '<w:tcPr>';
+      var tcPr = '<w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>';
       if (opts.shd) tcPr += '<w:shd w:val="clear" w:fill="' + opts.shd + '"/>';
       if (opts.span) tcPr += '<w:gridSpan w:val="' + opts.span + '"/>';
       tcPr += '</w:tcPr>';
@@ -12436,37 +12438,40 @@
       if (opts.b) rPr += '<w:b/>';
       if (opts.color) rPr += '<w:color w:val="' + opts.color + '"/>';
       rPr += '</w:rPr>';
-      return '<w:tc>' + tcPr + '<w:p><w:r>' + rPr +
+      var pPr = opts.align ? '<w:pPr><w:jc w:val="' + opts.align + '"/></w:pPr>' : '';
+      return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr +
         '<w:t xml:space="preserve">' + docxEsc(text) + '</w:t></w:r></w:p></w:tc>';
     }
     var HDR = {shd:'1A1A1A', b:true, color:'FF8C1A'};
+    var HDRR = {shd:'1A1A1A', b:true, color:'FF8C1A', align:'right'};
+    var NUM = {align:'right'};
     var tbl = '<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/>' +
-      '<w:tblW w:w="0" w:type="auto"/></w:tblPr>' +
-      '<w:tblGrid><w:gridCol/><w:gridCol/><w:gridCol/><w:gridCol/></w:tblGrid>';
-    tbl += '<w:tr>' + tcell('DESCRIPTION', HDR) + tcell('UNIT PRICE', HDR) +
-      tcell('QTY', HDR) + tcell('AMOUNT', HDR) + '</w:tr>';
+      '<w:tblW w:w="9360" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>' +
+      '<w:tblGrid>' + COLW.map(function(w){ return '<w:gridCol w:w="' + w + '"/>'; }).join('') + '</w:tblGrid>';
+    tbl += '<w:tr>' + tcell('DESCRIPTION', HDR, COLW[0]) + tcell('UNIT PRICE', HDRR, COLW[1]) +
+      tcell('QTY', HDRR, COLW[2]) + tcell('AMOUNT', HDRR, COLW[3]) + '</w:tr>';
     var docTotal = 0, docManual = false;
     state.lines.forEach(function(line){
       var u = line.unit;
       if (u.manual_quote){
         docManual = true;
-        tbl += '<w:tr>' + tcell(u.name + ' (' + line.faction + ') — manual quote needed') +
-          tcell('—') + tcell(String(line.qty)) + tcell('—') + '</w:tr>';
+        tbl += '<w:tr>' + tcell(u.name + ' (' + line.faction + ') — manual quote needed', null, COLW[0]) +
+          tcell('—', NUM, COLW[1]) + tcell(String(line.qty), NUM, COLW[2]) + tcell('—', NUM, COLW[3]) + '</w:tr>';
       } else {
         var p = tierPrice(u, line.tier);
         docTotal += p * line.qty;
-        tbl += '<w:tr>' + tcell(u.name + ' (' + line.faction + ') — Tier ' + line.tier) +
-          tcell(disp(p)) + tcell(String(line.qty)) + tcell(disp(p * line.qty)) + '</w:tr>';
+        tbl += '<w:tr>' + tcell(u.name + ' (' + line.faction + ') — Tier ' + line.tier, null, COLW[0]) +
+          tcell(disp(p), NUM, COLW[1]) + tcell(String(line.qty), NUM, COLW[2]) + tcell(disp(p * line.qty), NUM, COLW[3]) + '</w:tr>';
       }
       if (line.assembly){
         var au = asmUnits(line), af = asmFee(line);
         docTotal += af;
-        tbl += '<w:tr>' + tcell('Assembly — ' + u.name + ' (' + au + (au === 1 ? ' unit' : ' units') + ')') +
-          tcell(disp(ASM_FEE)) + tcell(String(au)) + tcell(disp(af)) + '</w:tr>';
+        tbl += '<w:tr>' + tcell('Assembly — ' + u.name + ' (' + au + (au === 1 ? ' unit' : ' units') + ')', null, COLW[0]) +
+          tcell(disp(ASM_FEE), NUM, COLW[1]) + tcell(String(au), NUM, COLW[2]) + tcell(disp(af), NUM, COLW[3]) + '</w:tr>';
       }
     });
-    tbl += '<w:tr>' + tcell('Estimated total' + (docManual ? ' + manual quote items' : ''), {b:true, span:3}) +
-      tcell(disp(docTotal), {b:true}) + '</w:tr>';
+    tbl += '<w:tr>' + tcell('Estimated total' + (docManual ? ' + manual quote items' : ''), {b:true, span:3}, COLW[0] + COLW[1] + COLW[2]) +
+      tcell(disp(docTotal), {b:true, align:'right'}, COLW[3]) + '</w:tr>';
     tbl += '</w:tbl>';
     body += tbl;
     body += '<w:p/>';
