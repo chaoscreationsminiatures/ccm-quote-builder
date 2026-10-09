@@ -112,6 +112,17 @@
     background-repeat:no-repeat; background-position:right .8rem center; padding-right:2.2rem;
   }
   .hint{font-size:.8rem; color:var(--muted); margin-top:.35rem;}
+  .search-wrap{position:relative;}
+  #unit-search{width:100%;}
+  .search-results{position:absolute; top:100%; left:0; right:0; z-index:20; max-height:16rem; overflow-y:auto;
+    background:var(--card); border:1px solid var(--orange); border-radius:.5rem; margin-top:.25rem;
+    box-shadow:0 .5rem 1.5rem rgba(0,0,0,.5);}
+  .search-results button{display:block; width:100%; text-align:left; padding:.55rem .8rem; font-size:.9rem;
+    background:none; border:none; border-bottom:1px solid rgba(255,255,255,.06); color:var(--text); cursor:pointer;}
+  .search-results button:last-child{border-bottom:none;}
+  .search-results button:hover, .search-results button:focus{background:#2a1a08; outline:none;}
+  .search-results .sr-faction{color:var(--orange); font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; display:block;}
+  .search-results .sr-none{padding:.7rem .8rem; font-size:.85rem; color:var(--muted);}
   .tiers{display:grid; grid-template-columns:repeat(3,1fr); gap:.6rem; margin-top:.4rem;}
   .tier-btn{
     background:#000; border:2px solid var(--border); color:var(--text);
@@ -247,6 +258,13 @@
   <div class="builder-grid">
   <section class="card" aria-label="Build your quote">
     <h2>Build your quote</h2>
+
+    <label for="unit-search">Search all units</label>
+    <div class="search-wrap">
+      <input type="text" id="unit-search" placeholder="Type a unit name…" autocomplete="off">
+      <div class="search-results" id="search-results" hidden></div>
+    </div>
+    <div class="hint">Know exactly what you want? Search it. Otherwise browse by army below.</div>
 
     <label for="faction">Army / Faction</label>
     <select id="faction"><option value="">Loading armies…</option></select>
@@ -12339,11 +12357,11 @@
       // stash sorted list for lookup
       DATA._sorted = facs;
 
-      factionSel.addEventListener('change', function(){
-        var i = factionSel.value;
+      function selectFaction(i){
+        factionSel.value = (i === '' || i == null) ? '' : String(i);
         unitSel.innerHTML = '';
         state.unit = null;
-        if (i === ''){
+        if (i === '' || i == null){
           state.faction = null;
           unitSel.disabled = true;
           unitSel.innerHTML = '<option value="">Select an army first</option>';
@@ -12360,12 +12378,67 @@
           });
         }
         renderTiers(); renderPreview(); renderEstimate();
-      });
+      }
+      factionSel.addEventListener('change', function(){ selectFaction(factionSel.value); });
 
+      function selectUnit(j){
+        unitSel.value = String(j);
+        state.unit = state.faction ? state.faction.units[+j] : null;
+        renderTiers(); renderPreview(); renderEstimate();
+      }
       unitSel.addEventListener('change', function(){
         var j = unitSel.value;
         state.unit = (j === '' || !state.faction) ? null : state.faction.units[+j];
         renderTiers(); renderPreview(); renderEstimate();
+      });
+
+      // ---- unit search across all factions ----
+      var searchInput = $('unit-search'), searchBox = $('search-results');
+      function closeSearch(){ searchBox.hidden = true; searchBox.innerHTML = ''; }
+      searchInput.addEventListener('input', function(){
+        var q = searchInput.value.trim().toLowerCase();
+        if (q.length < 2 || !facs){ closeSearch(); return; }
+        var hits = [];
+        facs.forEach(function(f, fi){
+          f.units.forEach(function(u, ui){
+            if (u.name.toLowerCase().indexOf(q) !== -1) hits.push({fi: fi, ui: ui, f: f, u: u});
+          });
+        });
+        hits.sort(function(a, b){
+          var an = a.u.name.toLowerCase(), bn = b.u.name.toLowerCase();
+          var as = an.indexOf(q), bs = bn.indexOf(q);
+          if (as !== bs) return as - bs;
+          return an < bn ? -1 : (an > bn ? 1 : 0);
+        });
+        hits = hits.slice(0, 15);
+        searchBox.innerHTML = '';
+        if (!hits.length){
+          var d = document.createElement('div');
+          d.className = 'sr-none';
+          d.textContent = 'No units match "' + searchInput.value.trim() + '"';
+          searchBox.appendChild(d);
+        } else {
+          hits.forEach(function(h){
+            var b = document.createElement('button');
+            b.type = 'button';
+            var fs = document.createElement('span');
+            fs.className = 'sr-faction'; fs.textContent = h.f.faction;
+            b.appendChild(fs);
+            b.appendChild(document.createTextNode(unitLabel(h.u)));
+            b.addEventListener('click', function(){
+              selectFaction(h.fi);
+              selectUnit(h.ui);
+              searchInput.value = h.u.name;
+              closeSearch();
+            });
+            searchBox.appendChild(b);
+          });
+        }
+        searchBox.hidden = false;
+      });
+      searchInput.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeSearch(); });
+      document.addEventListener('click', function(e){
+        if (!e.target.closest || !e.target.closest('.search-wrap')) closeSearch();
       });
 
       renderTiers(); renderTierDefs(); renderPreview(); renderQuote(); renderEstimate();
